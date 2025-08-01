@@ -129,16 +129,24 @@ class TestSESPublisher:
             "user2@example.com",
         ]
 
-    def test_send_report_no_recipients(self):
+    @patch("boto3.client")
+    def test_send_report_no_recipients(self, mock_boto_client):
         """Test email sending with no recipients."""
+        mock_ses_client = Mock()
+        mock_boto_client.return_value = mock_ses_client
+
         publisher = SESPublisher("sender@example.com")
 
         result = publisher.send_report("# Test Report", [], datetime.now())
 
         assert result is True  # Should succeed but skip sending
 
-    def test_markdown_to_text(self):
+    @patch("boto3.client")
+    def test_markdown_to_text(self, mock_boto_client):
         """Test markdown to text conversion."""
+        mock_ses_client = Mock()
+        mock_boto_client.return_value = mock_ses_client
+
         publisher = SESPublisher("sender@example.com")
 
         markdown = """---
