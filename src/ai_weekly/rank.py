@@ -20,7 +20,7 @@ def normalize_github_stars(papers: List[Paper]) -> List[Paper]:
     if not star_counts or max(star_counts) == min(star_counts):
         # All papers have same stars (or all zero), set normalized to 0
         for paper in papers:
-            paper._normalized_stars = 0.0
+            setattr(paper, "_normalized_stars", 0.0)
         return papers
 
     max_stars = max(star_counts)
@@ -29,7 +29,7 @@ def normalize_github_stars(papers: List[Paper]) -> List[Paper]:
     for paper in papers:
         stars = paper.github_stars or 0
         normalized = (stars - min_stars) / (max_stars - min_stars)
-        paper._normalized_stars = normalized
+        setattr(paper, "_normalized_stars", normalized)
 
     return papers
 

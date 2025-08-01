@@ -152,7 +152,10 @@ Format as structured text, not bullet points."""
                 messages=[{"role": "user", "content": prompt}],
             )
 
-            return response.content[0].text.strip()
+            text_content = getattr(response.content[0], "text", None)
+            return (
+                text_content.strip() if text_content else "Summary generation failed."
+            )
 
         except Exception as e:
             logger.error(f"Anthropic API error for paper {paper.title[:50]}...: {e}")
@@ -178,7 +181,10 @@ Format as structured text, not bullet points."""
                 messages=[{"role": "user", "content": prompt}],
             )
 
-            return response.content[0].text.strip()
+            text_content = getattr(response.content[0], "text", None)
+            return (
+                text_content.strip() if text_content else "Summary generation failed."
+            )
 
         except Exception as e:
             logger.error(f"Anthropic API error for intro generation: {e}")

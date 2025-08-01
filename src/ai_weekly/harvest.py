@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 import feedparser
-import requests
+import requests  # type: ignore
 from dataclasses import dataclass, asdict
 
 

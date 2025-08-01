@@ -72,7 +72,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Step 1: Harvest papers
         logger.info("Step 1: Harvesting papers")
         papers = harvest_papers(
-            categories=config.arxiv_categories, days_back=config.days_lookback
+            categories=config.arxiv_categories or [], days_back=config.days_lookback
         )
 
         if not papers:

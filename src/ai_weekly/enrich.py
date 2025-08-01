@@ -4,7 +4,7 @@ import logging
 import re
 import time
 from typing import List, Optional
-import requests
+import requests  # type: ignore
 from .harvest import Paper
 
 
