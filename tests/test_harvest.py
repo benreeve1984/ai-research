@@ -46,9 +46,9 @@ class TestArxivHarvester:
         )
 
         harvester = ArxivHarvester(["cs.LG"], days_back=7)
-        papers = harvester._fetch_category_papers(
-            "cs.LG", datetime.now() - timedelta(days=7)
-        )
+        # Use a cutoff date in the past so our mock paper from 2024-01-15 passes
+        cutoff_date = datetime(2024, 1, 1)
+        papers = harvester._fetch_category_papers("cs.LG", cutoff_date)
 
         assert len(papers) == 1
         paper = papers[0]
@@ -80,7 +80,10 @@ class TestPapersWithCodeHarvester:
     @responses.activate
     def test_harvest_trending_papers(self):
         """Test fetching trending papers from PapersWithCode."""
-        # Mock PapersWithCode API response
+        # Mock PapersWithCode API response with recent date
+        from datetime import datetime, timedelta
+        recent_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        
         mock_response = {
             "results": [
                 {
@@ -88,7 +91,7 @@ class TestPapersWithCodeHarvester:
                     "title": "Trending ML Paper",
                     "authors": ["Alice Johnson", "Bob Wilson"],
                     "abstract": "This paper is trending on PapersWithCode",
-                    "published": "2024-01-15T00:00:00Z",
+                    "published": recent_date,
                     "url_abs": "https://arxiv.org/abs/2024.01002",
                     "github_url": "https://github.com/alice/trending-ml",
                 }

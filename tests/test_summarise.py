@@ -13,125 +13,206 @@ from src.ai_weekly.summarise import (
 class TestOpenAIClient:
     """Test OpenAI client functionality."""
 
-    def test_init_success(self):
+    @patch('builtins.__import__')
+    def test_init_success(self, mock_import):
         """Test successful OpenAI client initialization."""
-        with patch("src.ai_weekly.summarise.openai") as mock_openai:
-            mock_openai.OpenAI.return_value = Mock()
+        mock_openai = Mock()
+        mock_openai.OpenAI.return_value = Mock()
+        
+        def side_effect(name, *args, **kwargs):
+            if name == 'openai':
+                return mock_openai
+            # For other imports, call the real import
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
 
-            client = OpenAIClient("test-key", "gpt-4o-mini")
+        client = OpenAIClient("test-key", "gpt-4o-mini")
 
-            assert client.api_key == "test-key"
-            assert client.model == "gpt-4o-mini"
-            mock_openai.OpenAI.assert_called_once_with(api_key="test-key")
+        assert client.api_key == "test-key"
+        assert client.model == "gpt-4o-mini"
+        mock_openai.OpenAI.assert_called_once_with(api_key="test-key")
 
-    def test_init_import_error(self):
+    @patch('builtins.__import__')
+    def test_init_import_error(self, mock_import):
         """Test OpenAI client initialization with import error."""
-        with patch("src.ai_weekly.summarise.openai", side_effect=ImportError()):
-            with pytest.raises(ImportError, match="OpenAI library not installed"):
-                OpenAIClient("test-key")
+        def side_effect(name, *args, **kwargs):
+            if name == 'openai':
+                raise ImportError("No module named 'openai'")
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
+        
+        with pytest.raises(ImportError, match="OpenAI library not installed"):
+            OpenAIClient("test-key")
 
-    def test_generate_summary(self, sample_paper):
+    @patch('builtins.__import__')
+    def test_generate_summary(self, mock_import, sample_paper):
         """Test paper summary generation."""
-        with patch("src.ai_weekly.summarise.openai") as mock_openai:
-            # Mock OpenAI response
-            mock_response = Mock()
-            mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = "Test summary content"
+        mock_openai = Mock()
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message.content = "Test summary content"
 
-            mock_client = Mock()
-            mock_client.chat.completions.create.return_value = mock_response
-            mock_openai.OpenAI.return_value = mock_client
+        mock_client = Mock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai.OpenAI.return_value = mock_client
+        
+        def side_effect(name, *args, **kwargs):
+            if name == 'openai':
+                return mock_openai
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
 
-            client = OpenAIClient("test-key")
-            summary = client.generate_summary(sample_paper)
+        client = OpenAIClient("test-key")
+        summary = client.generate_summary(sample_paper)
 
-            assert summary == "Test summary content"
-            mock_client.chat.completions.create.assert_called_once()
+        assert summary == "Test summary content"
+        mock_client.chat.completions.create.assert_called_once()
 
-    def test_generate_summary_api_error(self, sample_paper):
+    @patch('builtins.__import__')
+    def test_generate_summary_api_error(self, mock_import, sample_paper):
         """Test summary generation with API error."""
-        with patch("src.ai_weekly.summarise.openai") as mock_openai:
-            mock_client = Mock()
-            mock_client.chat.completions.create.side_effect = Exception("API Error")
-            mock_openai.OpenAI.return_value = mock_client
+        mock_openai = Mock()
+        mock_client = Mock()
+        mock_client.chat.completions.create.side_effect = Exception("API Error")
+        mock_openai.OpenAI.return_value = mock_client
+        
+        def side_effect(name, *args, **kwargs):
+            if name == 'openai':
+                return mock_openai
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
 
-            client = OpenAIClient("test-key")
-            summary = client.generate_summary(sample_paper)
+        client = OpenAIClient("test-key")
+        summary = client.generate_summary(sample_paper)
 
-            assert summary == "Summary generation failed."
+        assert summary == "Summary generation failed."
 
-    def test_generate_intro(self, sample_papers):
+    @patch('builtins.__import__')
+    def test_generate_intro(self, mock_import, sample_papers):
         """Test intro generation."""
-        with patch("src.ai_weekly.summarise.openai") as mock_openai:
-            mock_response = Mock()
-            mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = "Executive summary content"
+        mock_openai = Mock()
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message.content = "Executive summary content"
 
-            mock_client = Mock()
-            mock_client.chat.completions.create.return_value = mock_response
-            mock_openai.OpenAI.return_value = mock_client
+        mock_client = Mock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai.OpenAI.return_value = mock_client
+        
+        def side_effect(name, *args, **kwargs):
+            if name == 'openai':
+                return mock_openai
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
 
-            client = OpenAIClient("test-key")
-            intro = client.generate_intro(sample_papers)
+        client = OpenAIClient("test-key")
+        intro = client.generate_intro(sample_papers)
 
-            assert intro == "Executive summary content"
+        assert intro == "Executive summary content"
 
 
 class TestAnthropicClient:
     """Test Anthropic client functionality."""
 
-    def test_init_success(self):
+    @patch('builtins.__import__')
+    def test_init_success(self, mock_import):
         """Test successful Anthropic client initialization."""
-        with patch("src.ai_weekly.summarise.anthropic") as mock_anthropic:
-            mock_anthropic.Anthropic.return_value = Mock()
+        mock_anthropic = Mock()
+        mock_anthropic.Anthropic.return_value = Mock()
+        
+        def side_effect(name, *args, **kwargs):
+            if name == 'anthropic':
+                return mock_anthropic
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
 
-            client = AnthropicClient("test-key", "claude-3-opus-20240229")
+        client = AnthropicClient("test-key", "claude-3-opus-20240229")
 
-            assert client.api_key == "test-key"
-            assert client.model == "claude-3-opus-20240229"
-            mock_anthropic.Anthropic.assert_called_once_with(api_key="test-key")
+        assert client.api_key == "test-key"
+        assert client.model == "claude-3-opus-20240229"
+        mock_anthropic.Anthropic.assert_called_once_with(api_key="test-key")
 
-    def test_init_import_error(self):
+    @patch('builtins.__import__')
+    def test_init_import_error(self, mock_import):
         """Test Anthropic client initialization with import error."""
-        with patch("src.ai_weekly.summarise.anthropic", side_effect=ImportError()):
-            with pytest.raises(ImportError, match="Anthropic library not installed"):
-                AnthropicClient("test-key")
+        def side_effect(name, *args, **kwargs):
+            if name == 'anthropic':
+                raise ImportError("No module named 'anthropic'")
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
+        
+        with pytest.raises(ImportError, match="Anthropic library not installed"):
+            AnthropicClient("test-key")
 
-    def test_generate_summary(self, sample_paper):
+    @patch('builtins.__import__')
+    def test_generate_summary(self, mock_import, sample_paper):
         """Test paper summary generation."""
-        with patch("src.ai_weekly.summarise.anthropic") as mock_anthropic:
-            # Mock Anthropic response
-            mock_response = Mock()
-            mock_response.content = [Mock()]
-            mock_response.content[0].text = "Anthropic summary content"
+        mock_anthropic = Mock()
+        mock_response = Mock()
+        mock_response.content = [Mock()]
+        mock_response.content[0].text = "Anthropic summary content"
 
-            mock_client = Mock()
-            mock_client.messages.create.return_value = mock_response
-            mock_anthropic.Anthropic.return_value = mock_client
+        mock_client = Mock()
+        mock_client.messages.create.return_value = mock_response
+        mock_anthropic.Anthropic.return_value = mock_client
+        
+        def side_effect(name, *args, **kwargs):
+            if name == 'anthropic':
+                return mock_anthropic
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
 
-            client = AnthropicClient("test-key")
-            summary = client.generate_summary(sample_paper)
+        client = AnthropicClient("test-key")
+        summary = client.generate_summary(sample_paper)
 
-            assert summary == "Anthropic summary content"
-            mock_client.messages.create.assert_called_once()
+        assert summary == "Anthropic summary content"
+        mock_client.messages.create.assert_called_once()
 
 
 class TestCreateLLMClient:
     """Test LLM client factory function."""
 
-    def test_create_openai_client(self):
+    @patch('builtins.__import__')
+    def test_create_openai_client(self, mock_import):
         """Test creating OpenAI client."""
-        with patch("src.ai_weekly.summarise.openai"):
-            client = create_llm_client("openai", "test-key", "gpt-4o-mini")
-            assert isinstance(client, OpenAIClient)
+        mock_openai = Mock()
+        mock_openai.OpenAI.return_value = Mock()
+        
+        def side_effect(name, *args, **kwargs):
+            if name == 'openai':
+                return mock_openai
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
+        
+        client = create_llm_client("openai", "test-key", "gpt-4o-mini")
+        assert isinstance(client, OpenAIClient)
 
-    def test_create_anthropic_client(self):
+    @patch('builtins.__import__')
+    def test_create_anthropic_client(self, mock_import):
         """Test creating Anthropic client."""
-        with patch("src.ai_weekly.summarise.anthropic"):
-            client = create_llm_client(
-                "anthropic", "test-key", "claude-3-opus-20240229"
-            )
-            assert isinstance(client, AnthropicClient)
+        mock_anthropic = Mock()
+        mock_anthropic.Anthropic.return_value = Mock()
+        
+        def side_effect(name, *args, **kwargs):
+            if name == 'anthropic':
+                return mock_anthropic
+            return __import__(name, *args, **kwargs)
+        
+        mock_import.side_effect = side_effect
+        
+        client = create_llm_client(
+            "anthropic", "test-key", "claude-3-opus-20240229"
+        )
+        assert isinstance(client, AnthropicClient)
 
     def test_unsupported_backend(self):
         """Test creating client with unsupported backend."""
