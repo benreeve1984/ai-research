@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration - UPDATE THESE VALUES
 GITHUB_ORG="benreeve1984"  # Change this to your GitHub username/org
 GITHUB_REPO="ai-research"   # Change this to your repo name
-AWS_REGION="uk-west-2"             # Change if you want a different region
+AWS_REGION="us-east-1"             # OIDC providers must be created in us-east-1
 REPORT_BUCKET="ai-research-weekly-reports-$(date +%s)"  # Unique bucket name
 SECRET_NAME="ai-weekly/api-keys"
 
@@ -53,7 +53,7 @@ echo -e "${BLUE}🔐 Step 1: Setting up GitHub OIDC Provider and IAM Role${NC}"
 STACK_NAME="ai-weekly-github-oidc"
 
 aws cloudformation deploy \
-    --template-file setup/github-oidc-stack.yaml \
+    --template-file github-oidc-stack.yaml \
     --stack-name $STACK_NAME \
     --parameter-overrides \
         GitHubOrg=$GITHUB_ORG \
