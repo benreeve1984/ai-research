@@ -83,6 +83,23 @@ jobs:
       run: |
         sam build --use-container
     
+    - name: Clean up failed stack if exists
+      run: |
+        # Check if stack exists and is in ROLLBACK_COMPLETE state
+        STACK_STATUS=$(aws cloudformation describe-stacks --stack-name ai-research-weekly --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+        
+        if [ "$STACK_STATUS" = "ROLLBACK_COMPLETE" ]; then
+          echo "Stack is in ROLLBACK_COMPLETE state, deleting it..."
+          aws cloudformation delete-stack --stack-name ai-research-weekly
+          echo "Waiting for stack deletion to complete..."
+          aws cloudformation wait stack-delete-complete --stack-name ai-research-weekly
+          echo "Stack deleted successfully"
+        elif [ "$STACK_STATUS" != "DOES_NOT_EXIST" ]; then
+          echo "Stack exists with status: $STACK_STATUS"
+        else
+          echo "Stack does not exist, proceeding with deployment"
+        fi
+    
     - name: Deploy SAM application
       run: |
         # Build parameter overrides conditionally to avoid empty parameters
