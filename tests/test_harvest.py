@@ -1,7 +1,7 @@
 """Tests for paper harvesting functionality."""
 
 import responses
-from datetime import datetime, timedelta
+from datetime import datetime
 from src.ai_weekly.harvest import (
     ArxivHarvester,
     PapersWithCodeHarvester,
@@ -81,9 +81,12 @@ class TestPapersWithCodeHarvester:
     def test_harvest_trending_papers(self):
         """Test fetching trending papers from PapersWithCode."""
         # Mock PapersWithCode API response with recent date
-        from datetime import datetime, timedelta
-        recent_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        
+        from datetime import timedelta
+
+        recent_date = (datetime.now() - timedelta(days=1)).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+
         mock_response = {
             "results": [
                 {
