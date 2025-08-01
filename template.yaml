@@ -100,12 +100,12 @@ Resources:
                 - s3:PutObjectAcl
                 - s3:GetObject
               Resource: 
-                - !Sub '${ReportsBucket}/*'
+                - !Sub '${ReportsBucket.Arn}/*'
             - Effect: Allow
               Action:
                 - s3:ListBucket
               Resource: 
-                - !Ref ReportsBucket
+                - !GetAtt ReportsBucket.Arn
             # Secrets Manager permissions
             - Effect: Allow
               Action:
