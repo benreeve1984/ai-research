@@ -1,0 +1,194 @@
+name: AI Research Weekly CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run every Sunday at 10 PM UTC (same as Lambda schedule)
+    - cron: "0 22 * * SUN"
+
+env:
+  AWS_REGION: us-east-1
+  SAM_CLI_TELEMETRY: 0
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run linting
+      run: |
+        # Check code formatting
+        black --check src/ tests/
+        
+        # Run flake8 for style checking
+        flake8 src/ tests/ --max-line-length=100 --extend-ignore=E203,W503
+        
+        # Run type checking
+        mypy src/ --ignore-missing-imports
+    
+    - name: Run tests with coverage
+      run: |
+        pytest --cov=src --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
+        verbose: true
+
+  deploy:
+    name: Deploy to AWS
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
+    
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Set up AWS SAM CLI
+      uses: aws-actions/setup-sam@v2
+      with:
+        use-installer: true
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        role-session-name: GitHubActions
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Build SAM application
+      run: |
+        sam build --use-container
+    
+    - name: Deploy SAM application
+      run: |
+        sam deploy \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset \
+          --stack-name ai-research-weekly \
+          --capabilities CAPABILITY_IAM \
+          --parameter-overrides \
+            ReportBucket=${{ secrets.REPORT_BUCKET }} \
+            SecretName=${{ secrets.SECRET_NAME }} \
+            LLMBackend=${{ secrets.LLM_BACKEND || 'openai' }} \
+            LLMModel=${{ secrets.LLM_MODEL || 'gpt-4o-mini' }} \
+            SenderEmail=${{ secrets.SES_SENDER || '' }} \
+            Subscribers=${{ secrets.SUBSCRIBERS || '' }}
+    
+    - name: Get stack outputs
+      run: |
+        echo "Deployment completed successfully!"
+        aws cloudformation describe-stacks \
+          --stack-name ai-research-weekly \
+          --query 'Stacks[0].Outputs' \
+          --output table
+
+  manual-run:
+    name: Manual Pipeline Run
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        role-session-name: GitHubActionsManualRun
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Invoke Lambda function
+      run: |
+        echo "Invoking AI Research Weekly Lambda function..."
+        
+        # Invoke the Lambda function
+        aws lambda invoke \
+          --function-name ai-research-weekly \
+          --payload '{"source": "github-actions", "trigger": "manual"}' \
+          --cli-binary-format raw-in-base64-out \
+          response.json
+        
+        # Display the response
+        echo "Lambda response:"
+        cat response.json | jq '.'
+        
+        # Check if execution was successful
+        if [ $(cat response.json | jq -r '.statusCode') != "200" ]; then
+          echo "Lambda execution failed!"
+          exit 1
+        fi
+        
+        echo "Lambda execution completed successfully!"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install security tools
+      run: |
+        pip install bandit safety
+    
+    - name: Run Bandit security scan
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+        bandit -r src/ --severity-level medium
+    
+    - name: Check for known vulnerabilities
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json

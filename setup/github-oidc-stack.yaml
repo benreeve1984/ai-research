@@ -1,0 +1,172 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'GitHub OIDC Provider and IAM Role for AI Research Weekly CI/CD'
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: GitHub organization or username
+    Default: your-github-username
+  
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name
+    Default: ai-research-weekly
+  
+  ReportBucketName:
+    Type: String
+    Description: S3 bucket name for storing reports
+    Default: ai-research-weekly-reports
+
+Resources:
+  # GitHub OIDC Identity Provider
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCIdentityProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+        - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
+      Tags:
+        - Key: Project
+          Value: AIResearchWeekly
+        - Key: Component
+          Value: GitHubOIDC
+
+  # IAM Role for GitHub Actions
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-github-actions-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOIDCProvider
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: 
+                  - !Sub 'repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/main'
+                  - !Sub 'repo:${GitHubOrg}/${GitHubRepo}:pull_request'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
+      Policies:
+        - PolicyName: SAMDeploymentPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # S3 permissions for SAM artifacts and report bucket
+              - Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetBucketLocation
+                  - s3:GetBucketVersioning
+                  - s3:ListBucket
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucketPolicy
+                  - s3:PutBucketVersioning
+                  - s3:PutBucketEncryption
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutLifecycleConfiguration
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ReportBucketName}'
+                  - !Sub 'arn:aws:s3:::${ReportBucketName}/*'
+                  - !Sub 'arn:aws:s3:::aws-sam-cli-managed-default-samclisourcebucket-*'
+                  - !Sub 'arn:aws:s3:::aws-sam-cli-managed-default-samclisourcebucket-*/*'
+              
+              # Lambda permissions
+              - Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:DeleteFunction
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:UpdateFunctionCode
+                  - lambda:ListTags
+                  - lambda:TagResource
+                  - lambda:UntagResource
+                  - lambda:AddPermission
+                  - lambda:RemovePermission
+                  - lambda:InvokeFunction
+                Resource: '*'
+              
+              # IAM permissions for Lambda execution role
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:PassRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:GetRolePolicy
+                Resource: 
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/ai-research-weekly-*'
+              
+              # Events (EventBridge) permissions
+              - Effect: Allow
+                Action:
+                  - events:PutRule
+                  - events:DeleteRule
+                  - events:DescribeRule
+                  - events:PutTargets
+                  - events:RemoveTargets
+                  - events:ListTargetsByRule
+                Resource: '*'
+              
+              # CloudWatch permissions
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:DescribeLogGroups
+                  - logs:PutRetentionPolicy
+                  - cloudwatch:PutDashboard
+                  - cloudwatch:DeleteDashboard
+                  - cloudwatch:GetDashboard
+                Resource: '*'
+              
+              # Secrets Manager permissions
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource: '*'
+              
+              # SES permissions
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                  - ses:VerifyEmailIdentity
+                  - ses:ListIdentities
+                Resource: '*'
+      Tags:
+        - Key: Project
+          Value: AIResearchWeekly
+        - Key: Component
+          Value: GitHubActionsRole
+
+Outputs:
+  GitHubActionsRoleArn:
+    Description: 'ARN of the GitHub Actions IAM Role'
+    Value: !GetAtt GitHubActionsRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-GitHubActionsRoleArn'
+  
+  OIDCProviderArn:
+    Description: 'ARN of the GitHub OIDC Provider'
+    Value: !Ref GitHubOIDCProvider
+    Export:
+      Name: !Sub '${AWS::StackName}-OIDCProviderArn'
