@@ -45,7 +45,7 @@ Globals:
       - x86_64
     Environment:
       Variables:
-        REPORT_BUCKET: !Ref ReportBucket
+        REPORT_BUCKET: !Ref ReportsBucket
         SECRET_NAME: !Ref SecretName
         LLM_BACKEND: !Ref LLMBackend
         LLM_MODEL: !Ref LLMModel
@@ -57,7 +57,7 @@ Resources:
   ReportsBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref ReportBucket
+      BucketName: !Sub "${ReportBucket}-${AWS::AccountId}-${AWS::Region}"
       VersioningConfiguration:
         Status: Enabled
       PublicAccessBlockConfiguration:
