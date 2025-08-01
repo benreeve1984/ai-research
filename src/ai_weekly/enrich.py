@@ -39,9 +39,11 @@ class SemanticScholarEnricher:
                 paper.citation_count = s2_paper.get("citationCount", 0)
 
                 # Get SPECTER2 embedding if available
-                embedding = self._get_embedding(s2_paper.get("paperId"))
-                if embedding:
-                    paper.specter2_embedding = embedding
+                paper_id = s2_paper.get("paperId")
+                if paper_id:
+                    embedding = self._get_embedding(paper_id)
+                    if embedding:
+                        paper.specter2_embedding = embedding
 
                 logger.debug(
                     f"Enriched paper {paper.title[:50]}... with {paper.citation_count} citations"

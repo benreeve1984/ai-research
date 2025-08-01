@@ -125,7 +125,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         summarized_papers, intro = summarize_papers(
             papers=top_papers,
             backend=config.llm_backend,
-            api_key=api_key,
+            api_key=api_key or "",
             model=config.llm_model,
         )
 

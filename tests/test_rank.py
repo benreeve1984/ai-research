@@ -1,6 +1,5 @@
 """Tests for paper ranking functionality."""
 
-import pytest
 import math
 from src.ai_weekly.rank import (
     normalize_github_stars,

@@ -1,7 +1,7 @@
 """LLM-based paper summarization."""
 
 import logging
-from typing import List, Optional
+from typing import List
 from .harvest import Paper
 
 
@@ -44,7 +44,7 @@ Abstract: {paper.abstract}
 
 Please provide:
 1. Primary contribution (≤20 words)
-2. Practitioner impact (≤30 words)  
+2. Practitioner impact (≤30 words)
 3. One-line method description
 
 Format as structured text, not bullet points."""
@@ -55,7 +55,10 @@ Format as structured text, not bullet points."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an AI research expert who writes concise, technical summaries.",
+                        "content": (
+                            "You are an AI research expert who writes concise, "
+                            "technical summaries."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -63,7 +66,8 @@ Format as structured text, not bullet points."""
                 temperature=0.3,
             )
 
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            return content.strip() if content else "Summary generation failed."
 
         except Exception as e:
             logger.error(f"OpenAI API error for paper {paper.title[:50]}...: {e}")
@@ -73,12 +77,13 @@ Format as structured text, not bullet points."""
         """Generate executive summary intro."""
         paper_titles = "\n".join([f"- {paper.title}" for paper in papers])
 
-        prompt = f"""Write a 120-word executive summary for this week's top AI research papers. List 3 dominant themes across these papers:
-
-Papers:
-{paper_titles}
-
-Focus on overarching trends and themes that connect multiple papers, rather than individual paper details."""
+        prompt = (
+            f"Write a 120-word executive summary for this week's top AI research papers. "
+            f"List 3 dominant themes across these papers:\n\n"
+            f"Papers:\n{paper_titles}\n\n"
+            f"Focus on overarching trends and themes that connect multiple papers, "
+            f"rather than individual paper details."
+        )
 
         try:
             response = self.client.chat.completions.create(
@@ -86,7 +91,10 @@ Focus on overarching trends and themes that connect multiple papers, rather than
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an AI research analyst who identifies trends and themes in academic research.",
+                        "content": (
+                            "You are an AI research analyst who identifies trends "
+                            "and themes in academic research."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -94,11 +102,15 @@ Focus on overarching trends and themes that connect multiple papers, rather than
                 temperature=0.4,
             )
 
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            return content.strip() if content else "Summary generation failed."
 
         except Exception as e:
             logger.error(f"OpenAI API error for intro generation: {e}")
-            return "This week's AI research showcases continued progress across machine learning, computer vision, and natural language processing domains."
+            return (
+                "This week's AI research showcases continued progress across "
+                "machine learning, computer vision, and natural language processing domains."
+            )
 
 
 class AnthropicClient(LLMClient):
@@ -150,12 +162,13 @@ Format as structured text, not bullet points."""
         """Generate executive summary intro."""
         paper_titles = "\n".join([f"- {paper.title}" for paper in papers])
 
-        prompt = f"""Write a 120-word executive summary for this week's top AI research papers. List 3 dominant themes across these papers:
-
-Papers:
-{paper_titles}
-
-Focus on overarching trends and themes that connect multiple papers, rather than individual paper details."""
+        prompt = (
+            f"Write a 120-word executive summary for this week's top AI research papers. "
+            f"List 3 dominant themes across these papers:\n\n"
+            f"Papers:\n{paper_titles}\n\n"
+            f"Focus on overarching trends and themes that connect multiple papers, "
+            f"rather than individual paper details."
+        )
 
         try:
             response = self.client.messages.create(
@@ -169,7 +182,10 @@ Focus on overarching trends and themes that connect multiple papers, rather than
 
         except Exception as e:
             logger.error(f"Anthropic API error for intro generation: {e}")
-            return "This week's AI research showcases continued progress across machine learning, computer vision, and natural language processing domains."
+            return (
+                "This week's AI research showcases continued progress across "
+                "machine learning, computer vision, and natural language processing domains."
+            )
 
 
 def create_llm_client(backend: str, api_key: str, model: str) -> LLMClient:
@@ -220,5 +236,8 @@ def summarize_papers(
         # Return papers with error summaries
         for paper in papers:
             paper.summary = "Summary generation failed due to technical error."
-        intro = "This week's AI research summary could not be generated due to technical difficulties."
+        intro = (
+            "This week's AI research summary could not be generated "
+            "due to technical difficulties."
+        )
         return papers, intro

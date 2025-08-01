@@ -1,9 +1,8 @@
 """Publishing functionality for S3 and SES."""
 
 import logging
-import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 import boto3
 from botocore.exceptions import ClientError
 import pandas as pd
@@ -54,7 +53,10 @@ description: "Weekly digest of top AI research papers"
                 markdown += f"**Citations:** {paper.citation_count}  \n"
 
             if paper.github_url and paper.github_stars is not None:
-                markdown += f"**GitHub:** [{paper.github_url}]({paper.github_url}) ({paper.github_stars} ⭐)  \n"
+                markdown += (
+                    f"**GitHub:** [{paper.github_url}]({paper.github_url}) "
+                    f"({paper.github_stars} ⭐)  \n"
+                )
 
             markdown += f"**Score:** {paper.score:.2f}  \n"
             markdown += f"**Link:** [{paper.url}]({paper.url})  \n\n"
@@ -70,9 +72,12 @@ description: "Weekly digest of top AI research papers"
 
 This digest was automatically generated using the following methodology:
 
-1. **Paper Collection:** Harvested from arXiv (cs.AI, cs.LG, cs.CL, cs.CV) and PapersWithCode trending papers from the last 7 days
-2. **Enrichment:** Enhanced with citation counts from Semantic Scholar and GitHub star counts where available
-3. **Ranking:** Scored using formula: `0.5×log(citations+1) + 0.3×normalized_github_stars + 0.2×social_buzz`
+1. **Paper Collection:** Harvested from arXiv (cs.AI, cs.LG, cs.CL, cs.CV) and PapersWithCode
+   trending papers from the last 7 days
+2. **Enrichment:** Enhanced with citation counts from Semantic Scholar and GitHub star counts
+   where available
+3. **Ranking:** Scored using formula: `0.5×log(citations+1) + 0.3×normalized_github_stars +
+   0.2×social_buzz`
 4. **Summarization:** Generated using LLM analysis of abstracts and titles
 
 Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
@@ -132,7 +137,7 @@ class S3Publisher:
         logger.info(f"Saved paper data to {url}")
         return url
 
-    def _upload_file(self, key: str, content: str, content_type: str):
+    def _upload_file(self, key: str, content: Union[str, bytes], content_type: str):
         """Upload file to S3."""
         try:
             if isinstance(content, str):

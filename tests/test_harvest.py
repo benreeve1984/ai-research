@@ -1,6 +1,5 @@
 """Tests for paper harvesting functionality."""
 
-import pytest
 import responses
 from datetime import datetime, timedelta
 from src.ai_weekly.harvest import (
@@ -33,7 +32,8 @@ class TestArxivHarvester:
       <name>Jane Smith</name>
     </author>
     <link href="http://arxiv.org/abs/2024.01001v1" rel="alternate" type="text/html"/>
-    <arxiv:primary_category xmlns:arxiv="http://arxiv.org/schemas/atom" term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <arxiv:primary_category xmlns:arxiv="http://arxiv.org/schemas/atom"
+     term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
   </entry>
 </feed>"""
 

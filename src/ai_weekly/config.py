@@ -36,7 +36,7 @@ class Config:
     social_weight: float = 0.2
 
     # Paper collection
-    arxiv_categories: List[str] = None
+    arxiv_categories: Optional[List[str]] = None
     days_lookback: int = 7
     top_k_papers: int = 10
 

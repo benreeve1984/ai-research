@@ -2,7 +2,6 @@
 
 import pytest
 from datetime import datetime
-from typing import List
 from src.ai_weekly.harvest import Paper
 
 
@@ -13,7 +12,10 @@ def sample_paper():
         id="2024.01001",
         title="A Novel Approach to Machine Learning",
         authors=["John Doe", "Jane Smith"],
-        abstract="This paper presents a novel approach to machine learning that improves accuracy by 10%.",
+        abstract=(
+            "This paper presents a novel approach to machine learning "
+            "that improves accuracy by 10%."
+        ),
         published_date=datetime(2024, 1, 15),
         url="https://arxiv.org/abs/2024.01001",
         source="arxiv",

@@ -1,7 +1,6 @@
 """Tests for Lambda handler functionality."""
 
 import json
-import pytest
 from unittest.mock import Mock, patch
 from src.ai_weekly.lambda_handler import lambda_handler, run_pipeline
 
