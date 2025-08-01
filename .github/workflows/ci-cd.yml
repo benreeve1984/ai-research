@@ -85,18 +85,29 @@ jobs:
     
     - name: Deploy SAM application
       run: |
+        # Build parameter overrides conditionally to avoid empty parameters
+        PARAMS="ReportBucket=${{ secrets.REPORT_BUCKET }} SecretName=${{ secrets.SECRET_NAME }}"
+        PARAMS="$PARAMS LLMBackend=${{ secrets.LLM_BACKEND || 'openai' }}"
+        PARAMS="$PARAMS LLMModel=${{ secrets.LLM_MODEL || 'gpt-4o-mini' }}"
+        
+        # Only add SenderEmail if it's not empty
+        if [ -n "${{ secrets.SES_SENDER }}" ]; then
+          PARAMS="$PARAMS SenderEmail=${{ secrets.SES_SENDER }}"
+        fi
+        
+        # Only add Subscribers if it's not empty  
+        if [ -n "${{ secrets.SUBSCRIBERS }}" ]; then
+          PARAMS="$PARAMS Subscribers=${{ secrets.SUBSCRIBERS }}"
+        fi
+        
+        echo "Deploying with parameters: $PARAMS"
+        
         sam deploy \
           --no-confirm-changeset \
           --no-fail-on-empty-changeset \
           --stack-name ai-research-weekly \
           --capabilities CAPABILITY_IAM \
-          --parameter-overrides \
-            ReportBucket=${{ secrets.REPORT_BUCKET }} \
-            SecretName=${{ secrets.SECRET_NAME }} \
-            LLMBackend=${{ secrets.LLM_BACKEND || 'openai' }} \
-            LLMModel=${{ secrets.LLM_MODEL || 'gpt-4o-mini' }} \
-            SenderEmail=${{ secrets.SES_SENDER || '' }} \
-            Subscribers=${{ secrets.SUBSCRIBERS || '' }}
+          --parameter-overrides $PARAMS
     
     - name: Get stack outputs
       run: |
