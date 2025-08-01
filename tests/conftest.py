@@ -21,7 +21,7 @@ def sample_paper():
         citation_count=42,
         github_url="https://github.com/johndoe/ml-project",
         github_stars=150,
-        score=3.5
+        score=3.5,
     )
 
 
@@ -29,7 +29,7 @@ def sample_paper():
 def sample_papers(sample_paper):
     """List of sample papers for testing."""
     papers = []
-    
+
     # Create variations of the sample paper
     for i in range(5):
         paper = Paper(
@@ -42,12 +42,14 @@ def sample_papers(sample_paper):
             source="arxiv",
             categories=["cs.LG"],
             citation_count=10 * (i + 1),
-            github_url=f"https://github.com/author{i+1}/project{i+1}" if i % 2 == 0 else None,
+            github_url=(
+                f"https://github.com/author{i+1}/project{i+1}" if i % 2 == 0 else None
+            ),
             github_stars=50 * (i + 1) if i % 2 == 0 else None,
-            score=float(i + 1)
+            score=float(i + 1),
         )
         papers.append(paper)
-    
+
     return papers
 
 
@@ -55,7 +57,7 @@ def sample_papers(sample_paper):
 def mock_config():
     """Mock configuration for testing."""
     from src.ai_weekly.config import Config
-    
+
     return Config(
         report_bucket="test-bucket",
         openai_api_key="test-openai-key",
@@ -65,5 +67,5 @@ def mock_config():
         llm_backend="openai",
         llm_model="gpt-4o-mini",
         subscribers=["test@example.com"],
-        ses_sender="sender@example.com"
+        ses_sender="sender@example.com",
     )

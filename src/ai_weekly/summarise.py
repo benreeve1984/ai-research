@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 
 class LLMClient:
     """Base class for LLM clients."""
-    
+
     def generate_summary(self, paper: Paper) -> str:
         """Generate summary for a paper."""
         raise NotImplementedError
-    
+
     def generate_intro(self, papers: List[Paper]) -> str:
         """Generate intro summary for all papers."""
         raise NotImplementedError
@@ -22,17 +22,18 @@ class LLMClient:
 
 class OpenAIClient(LLMClient):
     """OpenAI GPT client."""
-    
+
     def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
         self.api_key = api_key
         self.model = model
-        
+
         try:
             import openai
+
             self.client = openai.OpenAI(api_key=api_key)
         except ImportError:
             raise ImportError("OpenAI library not installed. Run: pip install openai")
-    
+
     def generate_summary(self, paper: Paper) -> str:
         """Generate summary for a single paper."""
         prompt = f"""Analyze this research paper and provide a structured summary:
@@ -52,23 +53,26 @@ Format as structured text, not bullet points."""
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are an AI research expert who writes concise, technical summaries."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are an AI research expert who writes concise, technical summaries.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 max_tokens=200,
-                temperature=0.3
+                temperature=0.3,
             )
-            
+
             return response.choices[0].message.content.strip()
-            
+
         except Exception as e:
             logger.error(f"OpenAI API error for paper {paper.title[:50]}...: {e}")
             return "Summary generation failed."
-    
+
     def generate_intro(self, papers: List[Paper]) -> str:
         """Generate executive summary intro."""
         paper_titles = "\n".join([f"- {paper.title}" for paper in papers])
-        
+
         prompt = f"""Write a 120-word executive summary for this week's top AI research papers. List 3 dominant themes across these papers:
 
 Papers:
@@ -80,15 +84,18 @@ Focus on overarching trends and themes that connect multiple papers, rather than
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are an AI research analyst who identifies trends and themes in academic research."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are an AI research analyst who identifies trends and themes in academic research.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 max_tokens=180,
-                temperature=0.4
+                temperature=0.4,
             )
-            
+
             return response.choices[0].message.content.strip()
-            
+
         except Exception as e:
             logger.error(f"OpenAI API error for intro generation: {e}")
             return "This week's AI research showcases continued progress across machine learning, computer vision, and natural language processing domains."
@@ -96,17 +103,20 @@ Focus on overarching trends and themes that connect multiple papers, rather than
 
 class AnthropicClient(LLMClient):
     """Anthropic Claude client."""
-    
+
     def __init__(self, api_key: str, model: str = "claude-3-opus-20240229"):
         self.api_key = api_key
         self.model = model
-        
+
         try:
             import anthropic
+
             self.client = anthropic.Anthropic(api_key=api_key)
         except ImportError:
-            raise ImportError("Anthropic library not installed. Run: pip install anthropic")
-    
+            raise ImportError(
+                "Anthropic library not installed. Run: pip install anthropic"
+            )
+
     def generate_summary(self, paper: Paper) -> str:
         """Generate summary for a single paper."""
         prompt = f"""Analyze this research paper and provide a structured summary:
@@ -127,21 +137,19 @@ Format as structured text, not bullet points."""
                 model=self.model,
                 max_tokens=200,
                 temperature=0.3,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "user", "content": prompt}],
             )
-            
+
             return response.content[0].text.strip()
-            
+
         except Exception as e:
             logger.error(f"Anthropic API error for paper {paper.title[:50]}...: {e}")
             return "Summary generation failed."
-    
+
     def generate_intro(self, papers: List[Paper]) -> str:
         """Generate executive summary intro."""
         paper_titles = "\n".join([f"- {paper.title}" for paper in papers])
-        
+
         prompt = f"""Write a 120-word executive summary for this week's top AI research papers. List 3 dominant themes across these papers:
 
 Papers:
@@ -154,13 +162,11 @@ Focus on overarching trends and themes that connect multiple papers, rather than
                 model=self.model,
                 max_tokens=180,
                 temperature=0.4,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "user", "content": prompt}],
             )
-            
+
             return response.content[0].text.strip()
-            
+
         except Exception as e:
             logger.error(f"Anthropic API error for intro generation: {e}")
             return "This week's AI research showcases continued progress across machine learning, computer vision, and natural language processing domains."
@@ -176,12 +182,11 @@ def create_llm_client(backend: str, api_key: str, model: str) -> LLMClient:
         raise ValueError(f"Unsupported LLM backend: {backend}")
 
 
-def summarize_papers(papers: List[Paper], 
-                    backend: str,
-                    api_key: str,
-                    model: str) -> tuple[List[Paper], str]:
+def summarize_papers(
+    papers: List[Paper], backend: str, api_key: str, model: str
+) -> tuple[List[Paper], str]:
     """Summarize papers and generate intro."""
-    
+
     if not api_key:
         logger.error(f"No API key provided for {backend}")
         # Return papers with placeholder summaries
@@ -189,25 +194,27 @@ def summarize_papers(papers: List[Paper],
             paper.summary = "Summary generation disabled - no API key provided."
         intro = "AI research summary generation is currently disabled."
         return papers, intro
-    
+
     logger.info(f"Generating summaries using {backend} ({model})")
-    
+
     try:
         client = create_llm_client(backend, api_key, model)
-        
+
         # Generate individual paper summaries
         for i, paper in enumerate(papers):
-            logger.debug(f"Generating summary for paper {i+1}/{len(papers)}: {paper.title[:50]}...")
+            logger.debug(
+                f"Generating summary for paper {i+1}/{len(papers)}: {paper.title[:50]}..."
+            )
             summary = client.generate_summary(paper)
             paper.summary = summary
-        
+
         # Generate intro summary
         logger.info("Generating executive summary intro")
         intro = client.generate_intro(papers)
-        
+
         logger.info("Summarization completed")
         return papers, intro
-        
+
     except Exception as e:
         logger.error(f"Error during summarization: {e}")
         # Return papers with error summaries

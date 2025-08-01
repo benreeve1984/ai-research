@@ -13,17 +13,18 @@ if __name__ == "__main__":
     # Load environment variables from .env file if available
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
         print("Loaded environment variables from .env file")
     except ImportError:
         print("python-dotenv not installed, using system environment variables")
-    
+
     # Run the pipeline
     print("Starting AI Weekly pipeline...")
     result = run_pipeline()
-    
+
     # Exit with appropriate code
-    if result.get('statusCode') == 200:
+    if result.get("statusCode") == 200:
         print("Pipeline completed successfully!")
         sys.exit(0)
     else:
