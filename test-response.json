@@ -1,0 +1,1 @@
+{"errorMessage": "Unable to import module 'ai_weekly.lambda_handler': No module named 'feedparser'", "errorType": "Runtime.ImportModuleError", "requestId": "", "stackTrace": []}

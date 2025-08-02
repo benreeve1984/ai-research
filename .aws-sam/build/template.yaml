@@ -1,0 +1,234 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AI Research Weekly - Serverless pipeline for weekly AI paper digests
+Parameters:
+  ReportBucket:
+    Type: String
+    Description: S3 bucket name for storing reports and data
+    Default: ai-research-weekly-reports
+  SecretName:
+    Type: String
+    Description: AWS Secrets Manager secret name containing API keys
+    Default: ai-weekly/api-keys
+  LLMBackend:
+    Type: String
+    Description: LLM backend to use (openai or anthropic)
+    Default: openai
+    AllowedValues:
+    - openai
+    - anthropic
+  LLMModel:
+    Type: String
+    Description: LLM model to use
+    Default: gpt-4o-mini
+  SenderEmail:
+    Type: String
+    Description: SES verified sender email address (optional)
+    Default: ''
+  Subscribers:
+    Type: String
+    Description: Comma-separated list of subscriber emails (optional)
+    Default: ''
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 1024
+    Runtime: python3.12
+    Architectures:
+    - x86_64
+    Environment:
+      Variables:
+        REPORT_BUCKET:
+          Ref: ReportsBucket
+        SECRET_NAME:
+          Ref: SecretName
+        LLM_BACKEND:
+          Ref: LLMBackend
+        LLM_MODEL:
+          Ref: LLMModel
+        SES_SENDER:
+          Ref: SenderEmail
+        SUBSCRIBERS:
+          Ref: Subscribers
+Resources:
+  DependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: ai-weekly-dependencies
+      Description: Dependencies for AI Research Weekly
+      ContentUri: DependenciesLayer
+      CompatibleRuntimes:
+      - python3.12
+      RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: python3.12
+      SamResourceId: DependenciesLayer
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ${ReportBucket}-${AWS::AccountId}-${AWS::Region}
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+        - Id: DeleteOldVersions
+          Status: Enabled
+          NoncurrentVersionExpirationInDays: 90
+  AIWeeklyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ai-research-weekly
+      CodeUri: AIWeeklyFunction
+      Handler: ai_weekly.lambda_handler.lambda_handler
+      Description: Weekly AI research paper digest generator
+      Layers:
+      - Ref: DependenciesLayer
+      Events:
+        WeeklySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 22 ? * SUN *)
+            Description: Weekly AI research digest generation
+            Enabled: true
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:PutObject
+          - s3:PutObjectAcl
+          - s3:GetObject
+          Resource:
+          - Fn::Sub: ${ReportsBucket.Arn}/*
+        - Effect: Allow
+          Action:
+          - s3:ListBucket
+          Resource:
+          - Fn::GetAtt:
+            - ReportsBucket
+            - Arn
+        - Effect: Allow
+          Action:
+          - secretsmanager:GetSecretValue
+          Resource:
+          - Fn::Sub: arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretName}*
+        - Effect: Allow
+          Action:
+          - ses:SendEmail
+          - ses:SendRawEmail
+          Resource: '*'
+          Condition:
+            StringEquals:
+              ses:FromAddress:
+                Ref: SenderEmail
+        - Effect: Allow
+          Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          Resource: '*'
+      Tags:
+        Project: AIResearchWeekly
+        Component: LambdaFunction
+    Metadata:
+      SamResourceId: AIWeeklyFunction
+  AIWeeklyLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${AIWeeklyFunction}
+      RetentionInDays: 14
+  WeeklyScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: ai-weekly-schedule
+      Description: Trigger AI Weekly pipeline every Sunday
+      ScheduleExpression: cron(0 22 ? * SUN *)
+      State: ENABLED
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - AIWeeklyFunction
+          - Arn
+        Id: AIWeeklyTarget
+  SchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: AIWeeklyFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+        - WeeklyScheduleRule
+        - Arn
+  AIWeeklyDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: AI-Research-Weekly
+      DashboardBody:
+        Fn::Sub: "{\n  \"widgets\": [\n    {\n      \"type\": \"metric\",\n      \"\
+          x\": 0,\n      \"y\": 0,\n      \"width\": 12,\n      \"height\": 6,\n \
+          \     \"properties\": {\n        \"metrics\": [\n          [ \"AWS/Lambda\"\
+          , \"Duration\", \"FunctionName\", \"${AIWeeklyFunction}\" ],\n         \
+          \ [ \".\", \"Errors\", \".\", \".\" ],\n          [ \".\", \"Invocations\"\
+          , \".\", \".\" ]\n        ],\n        \"period\": 300,\n        \"stat\"\
+          : \"Sum\",\n        \"region\": \"${AWS::Region}\",\n        \"title\":\
+          \ \"AI Weekly Lambda Metrics\"\n      }\n    },\n    {\n      \"type\":\
+          \ \"log\",\n      \"x\": 0,\n      \"y\": 6,\n      \"width\": 24,\n   \
+          \   \"height\": 6,\n      \"properties\": {\n        \"query\": \"SOURCE\
+          \ '/aws/lambda/${AIWeeklyFunction}'\\n| fields @timestamp, @message\\n|\
+          \ sort @timestamp desc\\n| limit 100\",\n        \"region\": \"${AWS::Region}\"\
+          ,\n        \"title\": \"Recent Log Events\"\n      }\n    }\n  ]\n}\n"
+Outputs:
+  AIWeeklyFunctionArn:
+    Description: AI Weekly Lambda Function ARN
+    Value:
+      Fn::GetAtt:
+      - AIWeeklyFunction
+      - Arn
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-FunctionArn
+  ReportsBucketName:
+    Description: S3 Bucket for reports
+    Value:
+      Ref: ReportsBucket
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-BucketName
+  ReportsBucketArn:
+    Description: S3 Bucket ARN
+    Value:
+      Fn::GetAtt:
+      - ReportsBucket
+      - Arn
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-BucketArn
+  ScheduleRuleArn:
+    Description: EventBridge Schedule Rule ARN
+    Value:
+      Fn::GetAtt:
+      - WeeklyScheduleRule
+      - Arn
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-ScheduleArn
+  DashboardURL:
+    Description: CloudWatch Dashboard URL
+    Value:
+      Fn::Sub: https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${AIWeeklyDashboard}
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-DashboardURL

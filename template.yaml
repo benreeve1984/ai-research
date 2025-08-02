@@ -53,6 +53,19 @@ Globals:
         SUBSCRIBERS: !Ref Subscribers
 
 Resources:
+  # Lambda Layer for dependencies
+  DependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: ai-weekly-dependencies
+      Description: Dependencies for AI Research Weekly
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: python3.12
+  
   # S3 Bucket for reports and data
   ReportsBucket:
     Type: AWS::S3::Bucket
@@ -83,6 +96,8 @@ Resources:
       CodeUri: src/
       Handler: ai_weekly.lambda_handler.lambda_handler
       Description: 'Weekly AI research paper digest generator'
+      Layers:
+        - !Ref DependenciesLayer
       Events:
         WeeklySchedule:
           Type: Schedule

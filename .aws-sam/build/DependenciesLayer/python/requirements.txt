@@ -1,0 +1,10 @@
+# Core dependencies
+boto3>=1.34.0
+requests>=2.31.0
+feedparser>=6.0.10
+pandas>=2.1.0
+pyarrow>=14.0.0  # For parquet support
+
+# LLM clients
+openai>=1.12.0
+anthropic>=0.18.0
