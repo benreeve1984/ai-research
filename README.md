@@ -10,6 +10,7 @@ A serverless pipeline that automatically generates weekly AI research digests by
 - **AI-Powered Summarization**: Generates concise summaries using OpenAI GPT or Anthropic Claude
 - **Multi-format Publishing**: Outputs markdown reports to S3 with email distribution via AWS SES
 - **Serverless Architecture**: Runs entirely on AWS Lambda with EventBridge scheduling
+- **Email Notifications**: Optional email delivery to subscribers via AWS SES ([Setup Guide](docs/ses-setup.md))
 
 ## 📋 Requirements
 
@@ -65,7 +66,7 @@ Add the following secrets to your GitHub repository:
 - `SECRET_NAME`: Name of the Secrets Manager secret
 - `LLM_BACKEND`: "openai" or "anthropic" 
 - `LLM_MODEL`: Model name (e.g., "gpt-4o-mini")
-- `SES_SENDER`: Verified SES sender email (optional)
+- `SES_SENDER`: Verified SES sender email (optional - see [SES Setup](docs/ses-setup.md))
 - `SUBSCRIBERS`: Comma-separated subscriber emails (optional)
 
 ### 4. Deploy with SAM
